@@ -12,6 +12,19 @@
 
 Windows 上运行的 Codex 插件（`api-balance@local`）：余额悬浮窗、逐会话 token 账本、模型费用估算与分时计价。
 
+## 界面预览
+
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/01-overview.png" width="250" alt="总览"><br><sub><b>总览</b> · 余额、近 7 天消耗、当前模型</sub></td>
+    <td align="center"><img src="screenshots/02-conversations.png" width="250" alt="对话"><br><sub><b>对话</b> · 逐会话 token 账本（标题已打码）</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/03-usage.png" width="250" alt="用量"><br><sub><b>用量</b> · 每日消耗、模型分布</sub></td>
+    <td align="center"><img src="screenshots/04-settings.jpg" width="250" alt="设置"><br><sub><b>设置</b> · 计费倍率、闲时计价、刷新频率</sub></td>
+  </tr>
+</table>
+
 ## 下载
 
 安装包以 ZIP 形式发布在本仓库的 **Releases** 页：
