@@ -1,0 +1,23 @@
+**/config.json
+**/config.json.*
+**/.mcp.json
+**/.env*
+**/*.log
+**/*.jsonl
+**/*cache*.json
+**/.widget_state.json
+**/__pycache__/
+**/*.py[cod]
+**/*.lnk
+**/.DS_Store
+**/Thumbs.db
+*.zip
+
+# Configuration backups and editor/runtime artifacts
+**/config.*.json
+!**/config.example.json
+**/*.bak
+**/*.bak-*
+**/*.tmp
+**/.pytest_cache/
+**/.venv/

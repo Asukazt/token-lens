@@ -1,0 +1,62 @@
+{
+  "name": "api-balance",
+  "version": "2.0.1",
+  "description": "Token Lens：在 ChatGPT 窗口内实时查看余额、逐对话 token 用量、模型与费用估算。",
+  "author": {
+    "name": "local"
+  },
+  "license": "MIT",
+  "keywords": [
+    "balance",
+    "quota",
+    "api",
+    "aliyun",
+    "coupon",
+    "voucher",
+    "widget",
+    "floating-window",
+    "tokens",
+    "usage",
+    "cost",
+    "mcp"
+  ],
+  "mcpServers": "./.mcp.json",
+  "hooks": {
+    "hooks": {
+      "SessionStart": [
+        {
+          "hooks": [
+            {
+              "type": "mcp_tool",
+              "server": "api_balance",
+              "tool": "open_widget",
+              "input": {}
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "interface": {
+    "displayName": "Token Lens · 用量账本",
+    "shortDescription": "余额、逐对话 token、模型与费用估算，贴在 ChatGPT 窗口内",
+    "longDescription": "在 ChatGPT / Codex 窗口内查看余额、逐轮 token 与估算费用，支持总览、对话、用量和设置。同一 API 地址可保存多个独立计价分组，各自设置倍率、模型标准价和闲时价；可按分组查看、编辑和删除模型定价。小窗显示当前分组及倍率，长名称省略显示。窗口可拖动，位置限制在宿主窗口内；宿主最小化或关闭时隐藏，其他应用可以正常覆盖。余额来自配置的平台接口，用量在本机统计，费用是估算值。",
+    "developerName": "local",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "我 API 还剩多少钱？",
+      "这个对话用了多少 token，花了多少？",
+      "查看近 7 天各模型的用量",
+      "打开用量悬浮窗设置"
+    ],
+    "brandColor": "#FF7557",
+    "logo": "./assets/logo.png",
+    "composerIcon": "./assets/logo.png",
+    "screenshots": []
+  }
+}

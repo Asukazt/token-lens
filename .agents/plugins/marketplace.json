@@ -1,0 +1,19 @@
+{
+  "name": "local",
+  "interface": {
+    "displayName": "本地插件"
+  },
+  "plugins": [
+    {
+      "name": "api-balance",
+      "source": {
+        "source": "local",
+        "path": "./plugins/api-balance"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

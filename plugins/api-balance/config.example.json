@@ -1,0 +1,29 @@
+{
+  "relay": {
+    "base_url": "",
+    "api_key": "",
+    "name": "",
+    "endpoint": "",
+    "inherit": true
+  },
+  "aliyun": {
+    "access_key_id": "",
+    "access_key_secret": ""
+  },
+  "volcengine": {
+    "access_key_id": "",
+    "access_key_secret": ""
+  },
+  "pricing": {
+    "multiplier": 1.0,
+    "models": {}
+  },
+  "ui": {
+    "follow": true,
+    "texture": true,
+    "compact": false,
+    "refresh_sec": 2,
+    "balance_refresh_sec": 8,
+    "view": "overview"
+  }
+}
