@@ -40,7 +40,7 @@
   "interface": {
     "displayName": "Token Lens · 用量账本",
     "shortDescription": "余额、逐对话 token、模型与费用估算，贴在 ChatGPT 窗口内",
-    "longDescription": "启用后会在 ChatGPT / Codex 窗口内显示一枚可切换小窗与全窗的实时账本：余额和代金券来自阿里云只读账单接口，逐轮 token 与模型来自本机会话日志。总览显示当前对话、今日和近 7 天用量，对话页可按每段对话比较 token 与估算扣费，用量页显示每日柱状图和模型分布。费用按可在窗内修改的输入/缓存/输出单价与分组倍率计算，并支持开关时段计价、用时间面板添加多段闲时和周末全天闲时；小窗标记闲价/忙价，全窗显示切换倒计时。费用明确标为估算；中转站若提供 New-API 等余额接口也会自动读取。长按任意模式可拖动，位置始终锁在 ChatGPT 窗口内，切出或关闭 ChatGPT 时立即隐藏。",
+    "longDescription": "在 ChatGPT 窗口内实时显示余额、代金券、逐对话 token 与费用估算。费用按模型单价和分组倍率计算，支持忙闲时段，缓存命中价优先采用官网实价。小窗可最小化为金额，长按拖动，始终限制在 ChatGPT 窗口内，切出或关闭时立即隐藏。",
     "developerName": "local",
     "category": "Productivity",
     "capabilities": [
