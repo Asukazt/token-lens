@@ -1323,6 +1323,8 @@ def _price_for(model, price_config, at=None, tokens=None):
     if not configured:
         configured = (price_config.get("models") or {}).get(model) or {}
         source = "configured"
+    if configured.get("provider") == "dashscope" and configured.get("note"):
+        pricing_catalog.resolve_async(model, configured.get("input") or 0)
     if configured.get("tiers"):
         configured = _tier(configured, tokens)
     values = {}

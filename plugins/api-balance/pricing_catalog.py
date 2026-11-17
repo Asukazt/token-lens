@@ -74,9 +74,16 @@ def log(message):
 
 
 def _fetch(url, timeout=12):
-    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    request = urllib.request.Request(url, headers={
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"),
+        "Accept-Language": "zh-CN,zh;q=0.9",
+    })
     with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read().decode("utf-8", "replace")
+        page = response.read().decode("utf-8", "replace")
+    if "_____tmd_____" in page:  # 官网反爬验证页
+        raise OSError("官网限速，稍后重试")
+    return page
 
 
 def _text(fragment):
@@ -173,11 +180,13 @@ def _finish(provider, local, found):
 
 
 def parse_ali(page):
-    """百炼表格列常有合并单元格，按“元”价格列位置取输入/缓存/输出。"""
+    """百炼表格列常有合并单元格，按“元”价格列位置取输入/输出；缓存列只有表头声明时才算数。"""
     found = {}
     for table in _tables(page):
         if not any("模型 ID" in " ".join(row) for row in table[:3]):
             continue
+        header = next(row for row in table[:3] if any("模型 ID" in cell for cell in row))
+        has_cache = any("缓存" in cell for cell in header)
         local = {}
         for row in table:
             model_id = row[0].split(" ")[0]
@@ -190,7 +199,7 @@ def parse_ali(page):
             peak_out, idle_out = _prices(cells[-1])
             if peak_in is None or peak_out is None:
                 continue
-            estimated = len(cells) < 3
+            estimated = not has_cache
             if estimated:
                 rate = _cache_rate(row[0]) or 0.1
                 peak_cached = round(peak_in * rate, 6) if rate else None
@@ -203,6 +212,14 @@ def parse_ali(page):
             if idle_in is not None and idle_out is not None:
                 slot["idle"] = (idle_in, idle_cached, idle_out)
         _finish("dashscope", local, found)
+    for model_id, cached in ali_cache_prices(page).items():
+        entry = found.get(model_id)
+        if not entry:
+            continue
+        entry["cached"] = cached
+        if isinstance(entry.get("idle"), dict):
+            entry["idle"]["cached"] = cached
+        entry.pop("note", None)
     return found
 
 
@@ -299,6 +316,116 @@ PARSERS = {
     "ark": parse_ark,
 }
 
+# 百炼总价格表多数模型只有输入/输出两列，缓存命中价要去各自的模型文档页取
+DASH_SCOPE_DOC = "https://help.aliyun.com/zh/model-studio/"
+_CACHE_SECTION = re.compile(
+    r"(?is)<p><strong>\s*([^<]+?)\s*—\s*缓存单价（每百万\s*Token）\s*</strong></p>\s*<table\b.*?</table>")
+
+
+def ali_cache_prices(page):
+    """总价格页里 “xxx — 缓存单价” 小表：模型 -> 缓存命中单价。"""
+    prices = {}
+    for match in _CACHE_SECTION.finditer(page):
+        tables = _tables(match.group(0))
+        if not tables or len(tables[0]) < 2:
+            continue
+        header, body = tables[0][0], tables[0][1]
+        idx = next((i for i, cell in enumerate(header) if "缓存命中" in cell), None)
+        if idx is None:
+            continue
+        value = _first_number(body[idx] if idx < len(body) else "")
+        if value is not None:
+            prices[match.group(1).strip()] = value
+    return prices
+
+
+def _doc_prices(page):
+    """模型文档首张价格表（中国内地）的输入/缓存命中价，忙闲分档时取忙时。"""
+    for table in _tables(page):
+        rows = {row[0]: row[1] for row in table if len(row) > 1 and row[0]}
+        peak = _money(rows.get("输入")) or _money(rows.get("输入（忙时）"))
+        cached = (_money(rows.get("输入（缓存命中）"))
+                  or _money(rows.get("输入（缓存命中，忙时）"))
+                  or _money(rows.get("显式缓存命中")))
+        if cached is None:
+            continue
+        return peak, cached, _money(rows.get("输入（缓存命中，闲时）"))
+    return None, None, None
+
+
+def _doc_slugs(model_id):
+    """模型 id -> 文档路径候选；带版本的去掉厂商前缀/日期再试。"""
+    base = model_id.replace(".", "-").lower()
+    names = [base.replace("/", "-"), base.split("/")[-1]]
+    for name in list(names):
+        names.append(re.sub(r"-(?:\d{8}|\d{4}|\d{3,4})$", "", name))
+    return list(dict.fromkeys(name for name in names if name))
+
+
+def _apply_resolved(parsed, resolved):
+    for model_id, entry in parsed.items():
+        value = resolved.get(model_id)
+        if not value or not entry.get("note"):
+            continue
+        entry["cached"] = value[0]
+        if isinstance(entry.get("idle"), dict) and value[1] is not None:
+            entry["idle"]["cached"] = value[1]
+        entry.pop("note", None)
+
+
+_PENDING = set()
+_FAILED = {}
+RETRY_AFTER = 12 * 3600
+_DOC_LOCK = threading.Lock()
+
+
+def resolve_async(model_id, input_price):
+    """按需解析单个模型的缓存命中价，串行请求，结果写进 pricing_cache.json。"""
+    with _LOCK:
+        if model_id in _PENDING or time.time() - _FAILED.get(model_id, 0) < RETRY_AFTER:
+            return
+        _PENDING.add(model_id)
+
+    def run():
+        found = False
+        try:
+            with _DOC_LOCK:
+                for slug in _doc_slugs(model_id):
+                    try:
+                        peak, cached, idle = _doc_prices(_fetch(DASH_SCOPE_DOC + slug, timeout=10))
+                    except Exception:  # noqa: BLE001
+                        continue
+                    if cached is None or (peak is not None and abs(peak - input_price) > 1e-6):
+                        continue
+                    _store(model_id, cached, idle)
+                    found = True
+                    break
+                time.sleep(2)  # 同一站点连续请求容易触发反爬
+        finally:
+            with _LOCK:
+                _PENDING.discard(model_id)
+                if found:
+                    _FAILED.pop(model_id, None)
+                else:
+                    _FAILED[model_id] = time.time()
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+def _store(model_id, cached, idle_cached):
+    data = load()
+    prices = dict(data.get("cache_prices") or {})
+    prices[model_id] = [cached, idle_cached]
+    data["cache_prices"] = prices
+    entry = (data.get("models") or {}).get("dashscope:" + model_id)
+    if entry:
+        entry["cached"] = cached
+        if isinstance(entry.get("idle"), dict):
+            entry["idle"]["cached"] = cached if idle_cached is None else idle_cached
+        entry.pop("note", None)
+    _save(data)
+
+
 # 同一模型在不同平台的命名差异
 ALIASES = {
     "deepseek": {
@@ -328,6 +455,7 @@ def _holidays():
 def refresh():
     catalog = load()
     models = dict(catalog.get("models") or {})
+    resolved = dict(catalog.get("cache_prices") or {})
     error = []
     for key, provider in PROVIDERS.items():
         if key not in PARSERS:
@@ -340,6 +468,8 @@ def refresh():
         if len(parsed) < 2:
             error.append("%s: 解析不足，保留旧快照" % provider["label"])
             continue
+        if key == "dashscope":
+            _apply_resolved(parsed, resolved)
         for model_id, entry in parsed.items():
             models["%s:%s" % (key, model_id)] = entry
     holidays = _holidays()
@@ -354,13 +484,18 @@ def refresh():
                             if k in ("label", "source", "schedule")}
                       for key, provider in PROVIDERS.items()},
         "models": models,
+        "cache_prices": resolved,
         "error": error,
     }
+    _save(catalog)
+    return catalog
+
+
+def _save(catalog):
     temp = CACHE + ".tmp"
     with open(temp, "w", encoding="utf-8") as handle:
         json.dump(catalog, handle, ensure_ascii=False, indent=1)
     os.replace(temp, CACHE)
-    return catalog
 
 
 def load():
