@@ -52,9 +52,9 @@ git clone https://github.com/Asukazt/token-lens.git
 cd token-lens
 ```
 
-也可使用仓库的 **Code → Download ZIP**，解压后进入项目根目录。已有的发布包仍保留在 **Releases** 页，未包含本次源码更新：
+也可使用仓库的 **Code → Download ZIP**，或直接下载 **Releases** 页的发布包，解压后进入项目根目录：
 
-- 最新发布版：[v2.1.0 · Token Lens 2.1.0](https://github.com/Asukazt/token-lens/releases/latest)
+- 发布包：[v2.1.0 · Token Lens 2.1.0](https://github.com/Asukazt/token-lens/releases/tag/v2.1.0)（`token-lens-2.1.0.zip`）
 - 全部版本：[Releases](https://github.com/Asukazt/token-lens/releases)
 
 ## 安装
